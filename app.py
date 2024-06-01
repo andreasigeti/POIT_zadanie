@@ -145,9 +145,19 @@ def test_message(message):
 def db():
   db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)
   cursor = db.cursor()
-  cursor.execute('''SELECT senzor FROM zadanieDB''')
+  cursor.execute('''SELECT senzor FROM zadanieDB WHERE id=1''')
   rv = cursor.fetchall()
   return str(rv)
+
+@app.route('/dbdata/<string:num>', methods=['GET', 'POST'])
+def dbdata(num):
+  db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)
+  cursor = db.cursor()
+  print("..............")
+  print(num)
+  cursor.execute("SELECT senzor FROM zadanieDB WHERE id=%s",(num,))
+  rv = cursor.fetchone()
+  return str(rv[0])
 
 @socketio.on('db_event', namespace='/test')
 def db_message(message):
