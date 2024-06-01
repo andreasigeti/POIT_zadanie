@@ -85,7 +85,7 @@
           },
           yaxis: {
               title: 'Temperature (°C)',
-              range: [20,40]
+              range: [20,35]
           }
         };
         
@@ -120,7 +120,7 @@
                     isConnected = true;
 
                     socket.on('my_response', function(msg) {
-                      console.log(msg)
+                      //console.log(msg)
 
                       let temp = msg.data[0];
                       let press = msg.data[1];
@@ -140,8 +140,8 @@
                         y: y2,
                       }];
 
-                      console.log(layout1);
-                      console.log(trace1);
+                      //console.log(layout1);
+                      //console.log(trace1);
                       $('#log').append('Received #' + msg.count + ': ' + msg.data + '<br>');
                       Plotly.newPlot($('#plotdiv1')[0], trace1, layout1); 
                       Plotly.newPlot($('#plotdiv2')[0], trace2, layout2); 
@@ -177,7 +177,46 @@
         });
         
         
-        
+        $('#dbfetch').click(function () {
+          $.ajax({
+              type: "GET",
+              url: "/dbdata/" + $('#dbrow').val(),
+              success: function (indata) {
+                console.log(".................");
+                //console.log(data);
+                indata = JSON.parse(indata);
+                console.log(indata);
+                n = Object.keys(indata).length;
+                console.log(indata[0].data[0]);
+                
+                x = [];
+                y1 = [];
+                y2 = [];
+                
+                $('#log2')[0].innerText = "";
+                for (var i=0; i< n; i++){
+                  y2.push(indata[i].data[1]); 
+                  y1.push(indata[i].data[0]);
+                  x.push(indata[i].x);
+                  $('#log2')[0].innerText += "x: " + indata[i].x + ", temp: " + indata[i].data[0] + ", press: " + indata[i].data[1] + "\n";
+                }
+          
+                trace3 = [{
+                        x: x,
+                        y: y1,
+                      }];
+                trace4 = [{
+                        x: x,
+                        y: y2,
+                      }];      
+
+                Plotly.newPlot($('#plotdiv3')[0], trace3, layout1);
+                Plotly.newPlot($('#plotdiv4')[0], trace4, layout2);
+
+              }
+          }).done(function (o) {
+          });
+        });
         
         
         
@@ -259,9 +298,25 @@
               </div> 
             </div> 
           </div>
-          
-          
-          
+          <div id="tabs-4"> 
+<!--
+            <form id = "dbfetch" method="POST" action="#">
+-->
+            <div class = "row">
+              <div class = "col">
+                <input type="text" class= "form-control" name="value" id="dbrow" placeholder="Number of row in database">
+              </div>
+              <div class = "col">
+                <input type="submit" id="dbfetch" class="btn btn-primary btn-lg" value="Fetch">
+              </div>
+            </div>
+   <!--
+            </form>
+-->
+            <div id="log2"></div>
+            <div id="plotdiv3" style="width:500px;height:300px;"></div>
+            <div id="plotdiv4" style="width:500px;height:300px;"></div>
+          </div>
         </div>
       </div>
     </div>
