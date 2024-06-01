@@ -1,0 +1,272 @@
+<html>
+<head>
+    <title>Flask-SocketIO Test</title>
+    <link rel="stylesheet" href="static/jquery-ui.min.css">
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.5/socket.io.min.js"></script>
+    <script src="static/plotly-latest.min.js"></script>
+    <script src="static/jquery-3.2.1.min.js"></script>
+    <script src="static/jquery-ui.min.js"></script>
+    <script src="static/gauge.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script type="text/javascript" charset="utf-8">
+    $(document).ready(function() {
+        var gauge = new RadialGauge({
+          renderTo: 'canvasID2',
+          width: 300,
+          height: 300,
+          units: "Atmospheric pressure (hPa)",
+          minValue: 980,
+          maxValue: 1005,
+          majorTicks: [
+              "950",
+              "960",
+              "970",
+              "980",
+              "990",
+              "1000",
+              "1010",
+              "1020"
+          ],
+          minorTicks: 2,
+          strokeTicks: true,
+          highlights: [
+              {
+                  "from": 0.5,
+                  "to": 1,
+                  "color": "rgba(200, 50, 50, .75)"
+              }
+          ],
+        });
+        gauge.draw();
+        gauge.value = "0";
+        
+
+        var gauge2 = new RadialGauge({
+          renderTo: 'canvasID1',
+          width: 300,
+          height: 300,
+          units: "Temperature (°C)",
+          minValue: 0,
+          maxValue: 50,
+          majorTicks: [
+              "0",
+              "5",
+              "10",
+              "15",
+              "20",
+              "25",
+              "30",
+              "35",
+              "40",
+              "45",
+              "50"
+          ],
+          minorTicks: 2,
+          strokeTicks: true,
+          highlights: [
+              {
+                  "from": 0.5,
+                  "to": 1,
+                  "color": "rgba(251, 139, 0, 1)"
+              }
+          ],
+        });
+        gauge2.draw();
+        gauge2.value = "0";
+        
+        
+        
+        layout1 = {
+          title: 'Temperature',
+          xaxis: {
+              title: 'time (s)',
+          },
+          yaxis: {
+              title: 'Temperature (°C)',
+              range: [20,40]
+          }
+        };
+        
+        layout2 = {
+          title: 'Atmospheric pressure',
+          xaxis: {
+              title: 'time (s)',
+          },
+          yaxis: {
+              title: 'Atmospheric pressure (hPa)',
+              range: [950,1020]
+          }
+        };
+        
+        var x = new Array();
+        var y1 = new Array();
+        var y2 = new Array();
+
+      
+      
+        let socket;
+        let isConnected = false;
+        $('form#connect').submit(function(event) {
+            event.preventDefault();
+            if (!isConnected) {
+                const namespace = '/test';
+                socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+
+                socket.on('connect', function() {
+                    socket.emit('my_event', {data: 'Connected!', value: 1});
+                    document.getElementById('showDiv').style.display = "block"; 
+                    isConnected = true;
+
+                    socket.on('my_response', function(msg) {
+                      console.log(msg)
+
+                      let temp = msg.data[0];
+                      let press = msg.data[1];
+                      gauge.value = press;
+                      gauge2.value = temp; 
+                      x.push(parseFloat(msg.count));
+                      y1.push(parseFloat(temp));
+                      y2.push(parseFloat(press));
+
+                      trace1 = [{
+                        x: x,
+                        y: y1,
+                      }];
+                      
+                      trace2 = [{
+                        x: x,
+                        y: y2,
+                      }];
+
+                      console.log(layout1);
+                      console.log(trace1);
+                      $('#log').append('Received #' + msg.count + ': ' + msg.data + '<br>');
+                      Plotly.newPlot($('#plotdiv1')[0], trace1, layout1); 
+                      Plotly.newPlot($('#plotdiv2')[0], trace2, layout2); 
+                    });
+                });
+            }
+                
+        });
+
+        $('form#disconnect').submit(function(event) {
+            event.preventDefault();
+            if (isConnected) {
+                socket.emit('disconnect_request');
+                socket.io.disconnect();
+                document.getElementById('showDiv').style.display = "none"; 
+                isConnected = false;
+                $('#log').html(''); 
+            }
+          });
+          
+           
+          
+        $('#buttonVal2').click(function(event) {
+            event.preventDefault(); 
+            socket.emit('db_event', {value: $('#buttonVal2').val()});
+            if ($('#buttonVal2').val() === "start") {
+                $(this).val("stop");
+                $(this).text("Stop");
+            } else {
+                $(this).val("start");
+                $(this).text("Start");
+            }
+        });
+        
+        
+        
+        
+        
+        
+    });
+     $( function() {
+        $( "#tabs" ).tabs({
+          event: "mouseover"
+          });
+        } );
+    </script>
+</head>
+<body>
+  <div class="container">
+    <div class="row mt-5">
+      <div class="col d-flex justify-content-end">
+        <form id="connect" method="GET" action="#">
+          <input type="submit" class="btn btn-success btn-lg" value="Open">
+        </form> 
+      </div>
+      <div class="col d-flex justify-content-start">
+        <form id="disconnect" method="GET" action="#">
+          <input type="submit" class="btn btn-danger btn-lg" value="Close">
+        </form> 
+      </div>
+    </div>
+    <div class="row">
+      <div id="showDiv" style="display: none">
+        <button id="buttonVal2" type="submit" value="start" class="btn btn-primary btn-lg">Start</button>
+        
+        
+        <div id="tabs">
+          <ul>
+            <li><a href="#tabs-1">Numeric</a></li>
+            <li><a href="#tabs-2">Gauge</a></li>
+            <li><a href="#tabs-3">Plot</a></li>
+            <li><a href="#tabs-4">Database</a></li>
+            <li><a href="#tabs-5">File</a></li>
+          </ul>
+          <div id="tabs-1">
+            <h2>Receive:</h2>
+            <div id="log"></div>
+          </div>
+          <div id="tabs-2">
+            <div class = "row">
+              <div class = "row d-flex justify-content-center">
+                <div class= "row">
+                  <h2>Temperature</h2>
+                </div>
+                <div class= "row">
+                  <canvas id="canvasID1"></canvas>
+                </div>
+              </div> 
+              <div class = "row d-flex justify-content-center">
+                <div class= "row">
+                  <h2>Atmospheric pressure</h2>
+                </div>
+                <div class= "row">
+                  <canvas id="canvasID2"></canvas>
+                </div>
+              </div> 
+            </div>
+          </div>
+          <div id="tabs-3">
+            <div class = "row d-flex justify-content-center">
+              <div class = "row">
+                <h2>Temperature</h2>
+              </div>
+              <div class = "row" style="width:600px; height:350px;">
+                <div id="plotdiv1" style="width:500px;height:300px;"></div>
+              </div> 
+            </div> 
+
+            <div class = "row d-flex justify-content-center">                
+              <div class = "row" >
+                <h2>Atmospheric pressure</h2>
+              </div>
+              <div class = "row" style="width:600px; height:350px;">
+                <div id="plotdiv2" style="width:500px;height:300px;"></div>
+              </div> 
+            </div> 
+          </div>
+          
+          
+          
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  
+</body>
+</html>
