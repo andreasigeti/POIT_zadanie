@@ -17,6 +17,7 @@ thread_lock = Lock()
 
 ser = None 
 count = 0
+innerCount = 0
 
 config = ConfigParser.ConfigParser()
 config.read('config.cfg')
@@ -29,58 +30,11 @@ print(myhost)
 
 
 def background_thread(args):
-    global count
-    innerCount = 0
+    global count, innerCount
     dataCounter = 0 
     dataList = []
     db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)
     while True:
-#         try:
-#             if ser is not None and ser.isOpen() and ser.in_waiting > 0:
-#                 data = ser.readline().decode().strip()
-#                 if not data:
-#                     data = ""
-#                 else:
-#                     data = data.split(',')
-# 
-#                 argsData = dict(args).get('A', -1)
-#                 dbData = dict(args).get('db_value', -1)
-# 
-#                 print(dbData)
-#                 if dbData == "start":
-#                     innerCount += 1
-#                     dataDict = {
-#                         "t": time.time(),
-#                         "x": count,
-#                         "data": data}
-#                     dataList.append(dataDict)
-#                 else:
-#                     if len(dataList)>0:
-#                         replacedDataList = str(dataList).replace("'", "\"")
-#                         cursor = db.cursor()
-#                         cursor.execute("INSERT INTO zadanieDB (senzor) VALUES (%s)", (str(replacedDataList),))
-#                         db.commit()
-#                         print("DataList: "+dataList)
-# 
-#                         replacedDataList = json.dumps(dataList)
-#                         fo = open("files/hodnoty.txt","a+")    
-#                         fo.write("%s\r\n" %replacedDataList)
-#                     dataList = []
-#                     innerCount = 0
-#                     
-#                     
-#                     
-#                 if argsData == 0:
-#                     count = 0
-#                 elif argsData == 1:
-#                     count += 1
-# 
-#                 socketio.emit('my_response',
-#                        {"data": data, 'count': count},
-#                        namespace='/test')
-#         except:
-#             print("Exception occurred")
-
         try:
             if ser is not None and ser.isOpen() and ser.in_waiting > 0:
                 data = ser.readline().decode().strip()
@@ -94,12 +48,12 @@ def background_thread(args):
 
                 print(dbData)
                 if dbData == "start":
-                    innerCount += 1
                     dataDict = {
                         "t": time.time(),
-                        "x": count,
+                        "x": innerCount,
                         "data": data}
                     dataList.append(dataDict)
+                    innerCount += 1
                 else:
                     if len(dataList)>0:
                         replacedDataList = str(dataList).replace("'", "\"")
@@ -108,15 +62,12 @@ def background_thread(args):
                         db.commit()
                         print("data: %s",replacedDataList)
 
-                        #replacedDataList = json.dumps(dataList)
                         fo = open("static/files/test.txt","a+")
                         fo.write("%s\r\n" %replacedDataList)
                         fo.close()
                     dataList = []
                     innerCount = 0
-                    
-                    
-                    
+                print(innerCount)
                 if argsData == 0:
                     count = 0
                 elif argsData == 1:
@@ -140,6 +91,13 @@ def test_message(message):
     session['A'] = message['value']
     #emit('my_response',
      #    {'data': message['value'], 'count': session['receive_count']})
+
+@app.route('/read/<string:num>', methods=['GET', 'POST'])
+def readmyfile(num):
+    fo = open("static/files/test.txt","r")
+    rows = fo.readlines()
+    return rows[int(num)-1]
+
 
 @app.route('/db')
 def db():
